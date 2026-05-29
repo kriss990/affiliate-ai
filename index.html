@@ -1,0 +1,931 @@
+```html
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affiliprompt AI - Affiliate Video Prompt Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome untuk Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        },
+                        dark: {
+                            bg: '#0b0f19',
+                            card: '#161e31',
+                            border: '#24324f'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .glass {
+            background: rgba(22, 30, 49, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(36, 50, 79, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-dark-bg text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300 dark">
+    <!-- API Key & Global State Setup -->
+    <script>
+        const apiKey = "";
+        let uploadedProductBase64 = ""; // Menyimpan base64 gambar produk
+        let uploadedModelBase64 = "";   // Menyimpan base64 gambar model/talent
+        const generatedImagesStore = {}; // Menyimpan data URI gambar hasil render
+        
+        async function fetchWithRetry(url, options, retries = 5, delay = 1000) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
+                }
+                throw error;
+            }
+        }
+    </script>
+
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-200 dark:border-dark-border sticky top-0 z-40 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-green-400 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-green-500/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-lg animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-500 to-green-400 bg-clip-text text-transparent">AffiliPrompt AI</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Papan Cerita Visual & Generator Video Kreatif</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleTheme()" class="p-2 rounded-xl border border-slate-200 dark:border-dark-border hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all" title="Ubah Tema">
+                    <i id="theme-icon" class="fa-solid fa-sun text-sm"></i>
+                </button>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-400 border border-green-200 dark:border-green-900">
+                    <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-green-500 animate-ping"></span>
+                    Gemini 2.5 Active
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Hero Section -->
+        <div class="text-center max-w-3xl mx-auto mb-10">
+            <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">
+                Generasi Storyboard <span class="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Instan & Otomatis</span>
+            </h2>
+            <p class="text-slate-600 dark:text-slate-400 text-base sm:text-lg">
+                Cukup klik satu kali! AI akan merancang skrip dan langsung menghasilkan gambar adegan 9:16 yang konsisten secara berurutan menggunakan model <strong>Gemini Omni</strong>.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- Left Panel: Upload & Inputs (5 Cols) -->
+            <section class="lg:col-span-5 space-y-6">
+                <!-- Main Input Form Card -->
+                <div class="bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-2xl p-6 shadow-sm space-y-5">
+                    <div class="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-dark-border/50">
+                        <i class="fa-solid fa-photo-film text-emerald-500 text-lg"></i>
+                        <h3 class="font-bold text-lg text-slate-800 dark:text-slate-100">Bahan Konten & Referensi</h3>
+                    </div>
+
+                    <!-- Dual Upload Section -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- 1. Upload Produk -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">1. Foto Produk Asli</label>
+                            <div class="relative group border-2 border-dashed border-slate-200 dark:border-dark-border hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-xl p-3 bg-slate-50 dark:bg-slate-900/40 text-center transition-all cursor-pointer h-36 flex flex-col justify-center items-center">
+                                <input type="file" id="product-input" accept="image/*" onchange="handleProductUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                
+                                <div id="product-placeholder" class="space-y-1">
+                                    <i class="fa-solid fa-box-open text-slate-400 group-hover:text-emerald-500 transition-colors text-lg"></i>
+                                    <p class="text-[10px] font-bold text-slate-600 dark:text-slate-300">Pilih Foto Produk</p>
+                                    <p class="text-[8px] text-slate-400">PNG / JPG s.d 5MB</p>
+                                </div>
+
+                                <div id="product-preview-box" class="hidden relative w-full h-full flex flex-col items-center justify-center">
+                                    <img id="product-preview-img" src="" alt="Produk" class="max-h-24 w-auto rounded-lg object-contain border border-slate-200 dark:border-dark-border">
+                                    <button type="button" onclick="removeProductImage(event)" class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center hover:bg-rose-600 shadow-md transition-all z-20">
+                                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Upload Model/Talent -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">2. Foto Wajah Model</label>
+                            <div class="relative group border-2 border-dashed border-slate-200 dark:border-dark-border hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-xl p-3 bg-slate-50 dark:bg-slate-900/40 text-center transition-all cursor-pointer h-36 flex flex-col justify-center items-center">
+                                <input type="file" id="model-input" accept="image/*" onchange="handleModelUpload(event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                
+                                <div id="model-placeholder" class="space-y-1">
+                                    <i class="fa-solid fa-user-tie text-slate-400 group-hover:text-emerald-500 transition-colors text-lg"></i>
+                                    <p class="text-[10px] font-bold text-slate-600 dark:text-slate-300">Pilih Foto Model</p>
+                                    <p class="text-[8px] text-slate-400">Wajah / Pose s.d 5MB</p>
+                                </div>
+
+                                <div id="model-preview-box" class="hidden relative w-full h-full flex flex-col items-center justify-center">
+                                    <img id="model-preview-img" src="" alt="Model" class="max-h-24 w-auto rounded-lg object-contain border border-slate-200 dark:border-dark-border">
+                                    <button type="button" onclick="removeModelImage(event)" class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center hover:bg-rose-600 shadow-md transition-all z-20">
+                                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="generator-form" class="space-y-4" onsubmit="generatePrompts(event)">
+                        <!-- Nama/Link Produk -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Produk</label>
+                            <input type="text" id="prod-name" required placeholder="Contoh: Skincare Serum Brightening" 
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
+                        </div>
+
+                        <!-- Keunggulan Utama -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Detail / Deskripsi Hasil</label>
+                            <textarea id="prod-features" rows="2" placeholder="Contoh: Membuat kulit glowing kenyal seketika, kemasan botol kaca pipet ungu transparan." 
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all resize-none"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Niche/Kategori -->
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Niche/Kategori</label>
+                                <select id="prod-niche" class="w-full px-3 py-3 rounded-xl border border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
+                                    <option value="Beauty & Skincare">Kecantikan & Skincare</option>
+                                    <option value="Home & Kitchen">Rumah & Dapur</option>
+                                    <option value="Gadget & Electronics">Gadget & Elektronik</option>
+                                    <option value="Fashion & Apparel">Fashion & Pakaian</option>
+                                    <option value="Health & Fitness">Kesehatan & Olahraga</option>
+                                    <option value="Unboxing & General">Unboxing / Umum</option>
+                                </select>
+                            </div>
+
+                            <!-- Target Platform & Video Ratio -->
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Rasio & Platform</label>
+                                <select id="target-platform" class="w-full px-3 py-3 rounded-xl border border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
+                                    <option value="vertical">Vertikal 9:16 (TikTok/Reels)</option>
+                                    <option value="landscape">Horizontal 16:9 (YouTube)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Tonasi Suara (Tone of Voice) -->
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Gaya Penyampaian</label>
+                                <select id="video-tone" class="w-full px-3 py-3 rounded-xl border border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
+                                    <option value="Antusias & Energik">Antusias & Energik</option>
+                                    <option value="Edukasi & Informatif">Edukasi & Informatif</option>
+                                    <option value="Storytelling Emosional">Storytelling / Curhat</option>
+                                    <option value="Komedi & Lucu">Komedi / Kasual</option>
+                                    <option value="ASMR & Estetik">ASMR / Estetik</option>
+                                </select>
+                            </div>
+
+                            <!-- Formula Marketing -->
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Formula Penjualan</label>
+                                <select id="marketing-formula" class="w-full px-3 py-3 rounded-xl border border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
+                                    <option value="Hook, Story, Offer (HSO)">Hook -> Story -> Offer</option>
+                                    <option value="Problem, Agitate, Solution (PAS)">Problem -> Agitate -> Solution</option>
+                                    <option value="AIDA (Attention, Interest, Desire, Action)">Formula AIDA</option>
+                                    <option value="3 Alasan Kenapa Harus Beli">3 Alasan Harus Beli</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Tombol Generate Utama -->
+                        <button type="submit" id="btn-generate" class="w-full mt-2 py-4 px-6 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold shadow-lg shadow-green-500/20 hover:shadow-green-500/30 transition-all flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-sparkles"></i>
+                            <span>Hasilkan Konsep Video AI</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Right Panel: Generated Results & Storyboard Images -->
+            <section class="lg:col-span-7 space-y-6">
+                <!-- Welcome Placeholder -->
+                <div id="results-placeholder" class="bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-2xl p-12 text-center shadow-sm">
+                    <div class="w-20 h-20 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto mb-6">
+                        <i class="fa-solid fa-film text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Belum Ada Naskah & Storyboard</h3>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
+                        Unggah foto produk asli dan wajah model, lalu klik tombol generator di sebelah kiri. Aplikasi akan menyusun draf naskah video komersial dan merender seluruh adegan secara otomatis berurutan menggunakan Gemini Omni.
+                    </p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="results-loading" class="hidden bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-2xl p-12 text-center shadow-sm">
+                    <div class="inline-block relative w-20 h-20 mb-6">
+                        <div class="absolute inset-0 border-4 border-slate-200 dark:border-slate-800 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 animate-pulse text-emerald-500" id="loading-title">Menyinkronkan Referensi Visual...</h3>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-sm mx-auto text-sm" id="loading-desc">
+                        Gemini Omni AI sedang menganalisis detail wajah model dan produk untuk menciptakan instruksi render storyboard yang presisi.
+                    </p>
+                </div>
+
+                <!-- Custom Alert Modal -->
+                <div id="custom-alert" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                    <div class="bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border p-6 rounded-2xl max-w-md w-full shadow-2xl">
+                        <div class="flex items-center space-x-3 text-amber-500 mb-3">
+                            <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                            <h4 class="font-bold text-lg text-slate-800 dark:text-slate-100">Pemberitahuan</h4>
+                        </div>
+                        <p id="alert-message" class="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed"></p>
+                        <button onclick="closeAlert()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold rounded-xl transition-all">
+                            Mengerti
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Content Display -->
+                <div id="results-container" class="hidden space-y-6">
+                    <!-- Progress Bar for Automated Rendering -->
+                    <div id="auto-render-progress" class="hidden bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                            <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400" id="progress-text">Merender Adegan 1...</p>
+                        </div>
+                        <span class="text-xs bg-emerald-500 text-white font-bold px-2 py-0.5 rounded" id="progress-counter">0/0</span>
+                    </div>
+
+                    <!-- Quick Tabs -->
+                    <div class="flex border-b border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card p-1.5 rounded-xl border shadow-sm">
+                        <button onclick="switchTab('tab-script')" id="btn-tab-script" class="flex-1 py-2.5 px-4 rounded-lg font-bold text-sm transition-all bg-emerald-500 text-white shadow-sm">
+                            <i class="fa-solid fa-images mr-2"></i>Storyboard & Skrip Adegan
+                        </button>
+                        <button onclick="switchTab('tab-prompts')" id="btn-tab-prompts" class="flex-1 py-2.5 px-4 rounded-lg font-bold text-sm transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
+                            <i class="fa-solid fa-clapperboard mr-2"></i>AI Video Prompts (Scene)
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: STORYBOARD & SKRIP ADEGAN -->
+                    <div id="tab-script" class="space-y-6">
+                        <!-- Strategy Card -->
+                        <div class="bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-2xl p-6 shadow-sm">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="font-bold text-base text-slate-800 dark:text-slate-100 flex items-center">
+                                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full mr-2"></span>
+                                    Analisis Konsistensi Identitas Visual (Gemini Omni AI)
+                                </h4>
+                                <button onclick="copyToClipboard('strategy-content')" class="text-xs font-semibold px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 rounded-lg text-slate-500 dark:text-slate-400 transition-all flex items-center space-x-1">
+                                    <i class="fa-solid fa-copy"></i> <span>Salin</span>
+                                </button>
+                            </div>
+                            <div id="strategy-content" class="text-sm leading-relaxed text-slate-600 dark:text-slate-300 space-y-3">
+                                <!-- Terisi dinamis -->
+                            </div>
+                        </div>
+
+                        <!-- Full Script with Individual Scene Image Generators -->
+                        <div id="storyboard-scenes-list" class="space-y-6">
+                            <!-- Terisi secara dinamis -->
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: AI VIDEO PROMPTS -->
+                    <div id="tab-prompts" class="hidden space-y-6">
+                        <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs flex items-start space-x-2">
+                            <i class="fa-solid fa-circle-info text-base mt-0.5"></i>
+                            <div>
+                                <h5 class="font-bold mb-0.5">Petunjuk Sinkronisasi Video AI</h5>
+                                <p class="leading-relaxed">Gunakan prompt visual di bawah ini pada AI Video Generator pilihan Anda seperti <b>Sora, Luma, atau Runway</b> untuk menyusun klip video.</p>
+                            </div>
+                        </div>
+
+                        <div id="scenes-container" class="space-y-4">
+                            <!-- Terisi dinamis -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- FLOATING INTERNAL MODAL FOR SAVING IMAGES (100% FIXED FOR HP / IFRAME) -->
+    <div id="image-viewer-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col items-center space-y-4">
+            <div class="w-full flex justify-between items-center border-b border-slate-800 pb-3">
+                <span class="text-emerald-400 font-bold text-sm flex items-center">
+                    <i class="fa-solid fa-circle-check mr-2"></i> Adegan Siap Disimpan
+                </span>
+                <button onclick="closeImageViewer()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Instruction Box -->
+            <div class="w-full bg-slate-950 p-3.5 rounded-xl border border-emerald-500/10 text-center">
+                <p class="text-xs text-slate-300 font-medium leading-relaxed">
+                    👉 <strong class="text-emerald-400">Tekan dan Tahan</strong> gambar di bawah ini selama 2 detik, lalu pilih <strong class="text-emerald-400">"Simpan Gambar"</strong> atau <strong class="text-emerald-400">"Download Gambar"</strong> pada menu yang muncul.
+                </p>
+            </div>
+
+            <!-- Secure Image View Container (9:16) -->
+            <div class="relative w-full max-w-[260px] aspect-[9/16] bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
+                <img id="modal-target-img" src="" alt="Adegan Terpilih" class="w-full h-full object-cover select-none pointer-events-auto">
+            </div>
+
+            <button onclick="closeImageViewer()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm rounded-xl transition-all">
+                Selesai / Kembali ke Storyboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 dark:border-dark-border bg-white dark:bg-dark-bg py-6 mt-12 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1">
+            <p>&copy; 2026 AffiliPrompt AI. Didukung oleh Gemini 2.5 Flash Multimodal & Omni (Image-to-Image).</p>
+            <p>Sistem visualisasi gabungan pertama untuk efisiensi pembuatan iklan video tanpa model fisik.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts Logic -->
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                themeIcon.className = "fa-solid fa-moon text-sm";
+            } else {
+                html.classList.add('dark');
+                themeIcon.className = "fa-solid fa-sun text-sm";
+            }
+        }
+
+        function showAlert(msg) {
+            document.getElementById('alert-message').innerText = msg;
+            document.getElementById('custom-alert').classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('custom-alert').classList.add('hidden');
+        }
+
+        function handleProductUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert("Ukuran foto produk terlalu besar! Maksimal 5MB.");
+                event.target.value = "";
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedProductBase64 = e.target.result.split(',')[1];
+                document.getElementById('product-preview-img').src = e.target.result;
+                document.getElementById('product-placeholder').classList.add('hidden');
+                document.getElementById('product-preview-box').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeProductImage(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            uploadedProductBase64 = "";
+            document.getElementById('product-input').value = "";
+            document.getElementById('product-placeholder').classList.remove('hidden');
+            document.getElementById('product-preview-box').classList.add('hidden');
+        }
+
+        function handleModelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert("Ukuran foto model terlalu besar! Maksimal 5MB.");
+                event.target.value = "";
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedModelBase64 = e.target.result.split(',')[1];
+                document.getElementById('model-preview-img').src = e.target.result;
+                document.getElementById('model-placeholder').classList.add('hidden');
+                document.getElementById('model-preview-box').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeModelImage(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            uploadedModelBase64 = "";
+            document.getElementById('model-input').value = "";
+            document.getElementById('model-placeholder').classList.remove('hidden');
+            document.getElementById('model-preview-box').classList.add('hidden');
+        }
+
+        function switchTab(tabId) {
+            const btnScript = document.getElementById('btn-tab-script');
+            const btnPrompts = document.getElementById('btn-tab-prompts');
+            const tabScript = document.getElementById('tab-script');
+            const tabPrompts = document.getElementById('tab-prompts');
+
+            if (tabId === 'tab-script') {
+                tabScript.classList.remove('hidden');
+                tabPrompts.classList.add('hidden');
+                btnScript.className = "flex-1 py-2.5 px-4 rounded-lg font-bold text-sm transition-all bg-emerald-500 text-white shadow-sm";
+                btnPrompts.className = "flex-1 py-2.5 px-4 rounded-lg font-bold text-sm transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200";
+            } else {
+                tabScript.classList.add('hidden');
+                tabPrompts.classList.remove('hidden');
+                btnPrompts.className = "flex-1 py-2.5 px-4 rounded-lg font-bold text-sm transition-all bg-emerald-500 text-white shadow-sm";
+                btnScript.className = "flex-1 py-2.5 px-4 rounded-lg font-bold text-sm transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200";
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            let textToCopy = "";
+            if (element.tagName === "INPUT" || element.tagName === "TEXTAREA") {
+                textToCopy = element.value;
+            } else {
+                textToCopy = element.innerText;
+            }
+            const tempInput = document.createElement("textarea");
+            tempInput.value = textToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand('copy');
+                const toast = document.createElement("div");
+                toast.className = "fixed bottom-5 right-5 z-50 bg-green-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2";
+                toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>Teks disalin!</span>`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2500);
+            } catch (err) {
+                showAlert("Gagal menyalin teks.");
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        async function generatePrompts(event) {
+            event.preventDefault();
+
+            const prodName = document.getElementById('prod-name').value.trim();
+            const prodFeatures = document.getElementById('prod-features').value.trim() || 'Buatlah naskah visual kreatif.';
+            const prodNiche = document.getElementById('prod-niche').value;
+            const targetPlatform = document.getElementById('target-platform').value;
+            const videoTone = document.getElementById('video-tone').value;
+            const marketingFormula = document.getElementById('marketing-formula').value;
+
+            if (!prodName) {
+                showAlert("Silakan masukkan nama produk terlebih dahulu.");
+                return;
+            }
+
+            document.getElementById('results-placeholder').classList.add('hidden');
+            document.getElementById('results-container').classList.add('hidden');
+            document.getElementById('results-loading').classList.remove('hidden');
+
+            const systemPrompt = `Kamu adalah pakar video komersial digital. Kamu menerima deskripsi produk, gaya bahasa, serta gambar produk asli dan gambar wajah model talent.
+Tugas utamamu adalah mendefinisikan kunci karakteristik visual tetap ("locked_features") untuk wajah model (misalnya etnis, potongan rambut, struktur wajah, pakaian spesifik, ekspresi dasar) dan bentuk produk (warna utama, material, bentuk fisik wadah, logo) berdasarkan analisis gambar yang diunggah.
+
+Kemudian, gunakan ciri-ciri tetap tersebut secara ketat di dalam properti "prompt_adegan_imagen" di setiap adegan (scene) di draf skrip_video.
+
+Response harus dalam format JSON terstruktur valid tanpa penjelasan pembuka/penutup tambahan di luar skema ini:
+
+{
+  "analisis_strategi": {
+    "target_audience": "Deskripsi target audiens potensial",
+    "sudut_pandang_unik": "Sudut pandang promosi yang unik (menghubungkan identitas visual model & produk)",
+    "hook_rekomendasi": "3 variasi kalimat Hook pembuka video",
+    "tagar_viral": ["tagar1", "tagar2", "tagar3"],
+    "ciri_karakter_terkunci": "Penjelasan detail ciri fisik model & bentuk produk yang dikunci untuk menjamin konsistensi visual di seluruh scene"
+  },
+  "skrip_video": [
+    {
+      "bagian": "Bagian formula (misal: Hook / Story / Offer)",
+      "durasi": "Durasi perkiraan (misal: 0:00 - 0:05)",
+      "visual": "Aktivitas model dan interaksinya dengan produk secara rinci",
+      "voice_over": "Naskah narasi bahasa Indonesia yang harus dibacakan",
+      "teks_on_screen": "Teks pendek penarik perhatian yang muncul di video",
+      "prompt_adegan_imagen": "A detailed English text-to-image instruction describing a photorealistic video frame ad scene. You must instruct the AI to perfectly maintain the identity of the model and product provided in the input images. Describe the precise pose of the model interacting with the product, the lighting (e.g. professional commercial softbox lighting), camera depth, and environment. Focus on photorealistic close-up details."
+    }
+  ],
+  "ai_video_prompts": [
+    {
+      "scene_number": 1,
+      "bahasa_indonesia": "Deskripsi scene visual dalam bahasa Indonesia",
+      "english_prompt": "Highly detailed text-to-video AI prompt in English (Sora/Luma style) using the locked model and product features."
+    }
+  ]
+}`;
+
+            const userQuery = `Buatkan konsep video promosi afiliasi untuk produk berikut:
+- Nama Produk: ${prodName}
+- Fitur & Keunggulan: ${prodFeatures}
+- Kategori/Niche: ${prodNiche}
+- Format Rasio Video: ${targetPlatform === 'vertical' ? 'Vertical 9:16' : 'Landscape 16:9'}
+- Gaya Bahasa/Tone: ${videoTone}
+- Formula Penjualan: ${marketingFormula}
+${uploadedProductBase64 ? "- Catatan: Gambar referensi asli produk dilampirkan." : ""}
+${uploadedModelBase64 ? "- Catatan: Gambar model / talent dilampirkan." : ""}
+
+Sangat penting untuk menganalisis gambar terlampir dan mengunci deskripsi fisik model serta produk ke dalam setiap 'prompt_adegan_imagen' agar ketika dirender wajah model dan produknya konsisten tidak berubah-ubah wajah dan wujudnya.`;
+
+            try {
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const parts = [{ text: userQuery }];
+                
+                if (uploadedProductBase64) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: "image/png",
+                            data: uploadedProductBase64
+                        }
+                    });
+                }
+
+                if (uploadedModelBase64) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: "image/png",
+                            data: uploadedModelBase64
+                        }
+                    });
+                }
+
+                const response = await fetchWithRetry(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: parts }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    analisis_strategi: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            target_audience: { type: "STRING" },
+                                            sudut_pandang_unik: { type: "STRING" },
+                                            hook_rekomendasi: { type: "STRING" },
+                                            tagar_viral: { type: "ARRAY", items: { type: "STRING" } },
+                                            ciri_karakter_terkunci: { type: "STRING" }
+                                        },
+                                        required: ["target_audience", "sudut_pandang_unik", "hook_rekomendasi", "tagar_viral", "ciri_karakter_terkunci"]
+                                    },
+                                    skrip_video: {
+                                        type: "ARRAY",
+                                        items: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                bagian: { type: "STRING" },
+                                                durasi: { type: "STRING" },
+                                                visual: { type: "STRING" },
+                                                voice_over: { type: "STRING" },
+                                                teks_on_screen: { type: "STRING" },
+                                                prompt_adegan_imagen: { type: "STRING" }
+                                            },
+                                            required: ["bagian", "durasi", "visual", "voice_over", "teks_on_screen", "prompt_adegan_imagen"]
+                                        }
+                                    },
+                                    ai_video_prompts: {
+                                        type: "ARRAY",
+                                        items: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                scene_number: { type: "NUMBER" },
+                                                bahasa_indonesia: { type: "STRING" },
+                                                english_prompt: { type: "STRING" }
+                                            },
+                                            required: ["scene_number", "bahasa_indonesia", "english_prompt"]
+                                        }
+                                    }
+                                },
+                                required: ["analisis_strategi", "skrip_video", "ai_video_prompts"]
+                            }
+                        }
+                    })
+                });
+
+                const rawText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!rawText) {
+                    throw new Error("Gagal memproses.");
+                }
+
+                const data = JSON.parse(rawText);
+                renderResults(data);
+
+                // Jalankan proses rendering adegan otomatis berantai
+                await generateAllScenesAutomatically(data.skrip_video);
+
+            } catch (err) {
+                console.error(err);
+                showAlert("Gagal merancang konsep. Pastikan format berkas benar dan coba kembali.");
+                document.getElementById('results-placeholder').classList.remove('hidden');
+            } finally {
+                document.getElementById('results-loading').classList.add('hidden');
+            }
+        }
+
+        function renderResults(data) {
+            const targetPlatform = document.getElementById('target-platform').value;
+            const isVertical = targetPlatform === 'vertical';
+
+            // 1. Strategi & Analisis Konsistensi
+            const stratContent = document.getElementById('strategy-content');
+            stratContent.innerHTML = `
+                <p><strong><i class="fa-solid fa-users text-emerald-500 mr-1.5"></i> Profil Sasaran Audiens:</strong> ${data.analisis_strategi.target_audience}</p>
+                <p><strong><i class="fa-solid fa-bullseye text-emerald-500 mr-1.5"></i> Sudut Pandang Unik Iklan:</strong> ${data.analisis_strategi.sudut_pandang_unik}</p>
+                <div class="bg-blue-500/5 p-3 rounded-xl border border-blue-500/10 mt-3">
+                    <p class="font-bold text-xs text-blue-500 dark:text-blue-400 mb-1"><i class="fa-solid fa-lock mr-1"></i> Identitas Terkunci (Consistency Lock):</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">${data.analisis_strategi.ciri_karakter_terkunci}</p>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-100 dark:border-dark-border/40 mt-3">
+                    <p class="font-bold text-xs text-slate-500 dark:text-slate-400 mb-1">Pilihan Hook Pembuka:</p>
+                    <p class="italic text-slate-800 dark:text-slate-200 whitespace-pre-line">${data.analisis_strategi.hook_rekomendasi}</p>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                    ${data.analisis_strategi.tagar_viral.map(tag => `<span class="text-xs font-semibold px-2 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md">#${tag}</span>`).join('')}
+                </div>
+            `;
+
+            // 2. Skrip dengan Placeholder Gambar
+            const storyboardScenesList = document.getElementById('storyboard-scenes-list');
+            storyboardScenesList.innerHTML = '';
+            
+            data.skrip_video.forEach((scene, index) => {
+                const sceneDiv = document.createElement('div');
+                sceneDiv.className = "bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-2xl p-6 shadow-sm space-y-4";
+                
+                const imgPlaceholderId = `scene-img-box-${index}`;
+                const imgElementId = `scene-img-${index}`;
+                const spinnerId = `scene-spinner-${index}`;
+                const btnId = `btn-action-${index}`;
+
+                const ratioClass = isVertical ? "aspect-[9/16] max-w-[260px] mx-auto" : "aspect-[16/9] w-full";
+
+                sceneDiv.innerHTML = `
+                    <div class="flex flex-wrap justify-between items-center pb-2 border-b border-slate-100 dark:border-dark-border/40">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-500 flex items-center">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>
+                            Adegan ${index + 1}: ${scene.bagian} (${scene.durasi})
+                        </span>
+                        <div class="flex space-x-1">
+                            <button onclick="copyToClipboard('vo-text-${index}')" class="p-1 px-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[10px] font-bold rounded text-slate-500 dark:text-slate-300 transition-all flex items-center space-x-1">
+                                <i class="fa-solid fa-copy"></i> <span>Salin VO</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                        <!-- Left: Text Script Details -->
+                        <div class="md:col-span-7 space-y-3.5">
+                            <div>
+                                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Panduan Visual & Aksi Model</span>
+                                <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">${scene.visual}</p>
+                            </div>
+                            
+                            <div class="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-100 dark:border-dark-border/40">
+                                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Naskah Suara / Voice Over (VO)</span>
+                                <p id="vo-text-${index}" class="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium italic">"${scene.voice_over}"</p>
+                            </div>
+
+                            <div class="flex space-x-3 text-xs">
+                                <p class="text-slate-500 dark:text-slate-400"><strong class="text-slate-700 dark:text-slate-300">Teks Layar:</strong> "${scene.teks_on_screen}"</p>
+                            </div>
+                        </div>
+
+                        <!-- Right: Interactive Gemini Omni Adegan Renderer -->
+                        <div class="md:col-span-5 space-y-3">
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center md:text-left">
+                                Visualisasi Adegan (${isVertical ? 'Vertikal 9:16' : 'Horizontal 16:9'})
+                            </span>
+                            
+                            <!-- Main Image Area -->
+                            <div class="relative rounded-xl overflow-hidden border border-slate-200 dark:border-dark-border bg-slate-50 dark:bg-slate-950/60 flex items-center justify-center shadow-inner ${ratioClass}">
+                                <div id="${imgPlaceholderId}" class="p-4 text-center text-slate-400 dark:text-slate-500 space-y-1.5">
+                                    <i class="fa-solid fa-mobile-screen-button text-2xl animate-pulse text-slate-400"></i>
+                                    <p class="text-[10px] leading-snug">Menunggu antrean lukis...</p>
+                                </div>
+
+                                <img id="${imgElementId}" src="" alt="Adegan ${index + 1}" class="hidden w-full h-full object-cover">
+
+                                <div id="${spinnerId}" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4">
+                                    <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-1.5"></div>
+                                    <p class="text-[9px] text-emerald-400 font-bold animate-pulse">Melukis Adegan...</p>
+                                </div>
+                            </div>
+
+                            <input type="hidden" id="scene-prompt-input-${index}" value="${scene.prompt_adegan_imagen}">
+                            
+                            <!-- Tombol Aksi Penyelamatan Gambar Utama -->
+                            <button id="${btnId}" disabled class="w-full py-2.5 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-dark-border text-xs font-bold transition-all flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-hourglass-start"></i>
+                                <span>Sedang Menunggu Antrean...</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                storyboardScenesList.appendChild(sceneDiv);
+            });
+
+            // 3. Render AI Video Prompts (Tab 2)
+            const scenesContainer = document.getElementById('scenes-container');
+            scenesContainer.innerHTML = '';
+
+            data.ai_video_prompts.forEach((scene) => {
+                const promptCard = document.createElement('div');
+                promptCard.className = "bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-xl p-5 shadow-sm space-y-3";
+                
+                const promptId = `scene-prompt-${scene.scene_number}`;
+                
+                promptCard.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-extrabold px-2.5 py-1 bg-green-500/10 text-emerald-500 rounded-full">Klip Adegan ${scene.scene_number}</span>
+                        <button onclick="copyToClipboard('${promptId}')" class="text-xs px-2 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 rounded text-slate-500 dark:text-slate-400 transition-all flex items-center space-x-1">
+                            <i class="fa-solid fa-copy"></i> <span>Salin Prompt Video</span>
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <div>
+                            <span class="block text-[10px] font-bold text-slate-400">PANDUAN KLIP (ID)</span>
+                            <p class="text-xs text-slate-600 dark:text-slate-300">${scene.bahasa_indonesia}</p>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-dark-border/50">
+                            <span class="block text-[10px] font-bold text-emerald-500 mb-1">PROMPT UNTUK SORA / LUMA / RUNWAY</span>
+                            <p id="${promptId}" class="text-xs text-slate-800 dark:text-slate-100 font-mono leading-relaxed select-all">${scene.english_prompt}</p>
+                        </div>
+                    </div>
+                `;
+                scenesContainer.appendChild(promptCard);
+            });
+
+            document.getElementById('results-container').classList.remove('hidden');
+            switchTab('tab-script');
+        }
+
+        // Fungsi Alur Kerja Generasi Adegan Otomatis & Berurutan
+        async function generateAllScenesAutomatically(scenes) {
+            const progressBar = document.getElementById('auto-render-progress');
+            const progressText = document.getElementById('progress-text');
+            const progressCounter = document.getElementById('progress-counter');
+
+            progressBar.classList.remove('hidden');
+            progressCounter.innerText = `0/${scenes.length}`;
+
+            for (let i = 0; i < scenes.length; i++) {
+                progressText.innerText = `Mewarnai Adegan ${i + 1} dari ${scenes.length}...`;
+                progressCounter.innerText = `${i + 1}/${scenes.length}`;
+                
+                try {
+                    await renderSceneVisualOtomatis(i, scenes[i].prompt_adegan_imagen);
+                } catch (err) {
+                    console.error(`Gagal menghasilkan adegan ${i + 1}:`, err);
+                }
+            }
+
+            progressBar.classList.add('hidden');
+        }
+
+        // Sub-fungsi untuk Memanggil Model Gemini Omni per Scene secara Otomatis
+        async function renderSceneVisualOtomatis(index, promptText) {
+            const imgPlaceholder = document.getElementById(`scene-img-box-${index}`);
+            const imgElement = document.getElementById(`scene-img-${index}`);
+            const spinner = document.getElementById(`scene-spinner-${index}`);
+            const btn = document.getElementById(`btn-action-${index}`);
+
+            const targetPlatform = document.getElementById('target-platform').value;
+            const isVertical = targetPlatform === 'vertical';
+
+            spinner.classList.remove('hidden');
+
+            const aspectStr = isVertical 
+                ? "Generate a stunning high-quality vertical photorealistic photo with 9:16 aspect ratio." 
+                : "Generate a stunning high-quality landscape photorealistic photo with 16:9 aspect ratio.";
+                
+            const enrichedPrompt = `${aspectStr} ${promptText}. Highly follow the physical visual attributes, colors, logo style from the uploaded product image and the model's hair style, face features and clothing style from the uploaded model image to maintain strict 100% visual consistency. Do not output text, return only the image.`;
+
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+
+            const parts = [{ text: enrichedPrompt }];
+            
+            if (uploadedProductBase64) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/png",
+                        data: uploadedProductBase64
+                    }
+                });
+            }
+
+            if (uploadedModelBase64) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/png",
+                        data: uploadedModelBase64
+                    }
+                });
+            }
+
+            const response = await fetchWithRetry(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: parts }],
+                    generationConfig: {
+                        responseModalities: ["TEXT", "IMAGE"]
+                    }
+                })
+            });
+
+            const base64Data = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+            if (!base64Data) {
+                throw new Error("Gagal mengambil data gambar.");
+            }
+
+            const dataUri = `data:image/png;base64,${base64Data}`;
+            
+            // Simpan gambar secara global
+            generatedImagesStore[index] = dataUri;
+
+            // Render gambar ke viewport
+            imgElement.src = dataUri;
+            
+            imgPlaceholder.classList.add('hidden');
+            imgElement.classList.remove('hidden');
+            spinner.classList.add('hidden');
+
+            // Aktifkan tombol aksi penyimpanan aman
+            btn.disabled = false;
+            btn.onclick = () => openImageViewer(index);
+            btn.className = "w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all flex items-center justify-center space-x-2";
+            btn.innerHTML = `<i class="fa-solid fa-up-right-from-square"></i> <span>Buka & Simpan Gambar</span>`;
+        }
+
+        // METODE PENYELAMATAN 100% SUKSES UNTUK MOBILE IFRAME
+        function openImageViewer(index) {
+            const dataUri = generatedImagesStore[index];
+            if (!dataUri) return;
+
+            const modal = document.getElementById('image-viewer-modal');
+            const modalImg = document.getElementById('modal-target-img');
+            
+            modalImg.src = dataUri;
+            modal.classList.remove('hidden');
+        }
+
+        function closeImageViewer() {
+            document.getElementById('image-viewer-modal').classList.add('hidden');
+        }
+
+        window.onload = function() {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                toggleTheme();
+            }
+        }
+    </script>
+</body>
+</html>
+
+```
