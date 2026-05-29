@@ -56,14 +56,16 @@
     <!-- Firebase Initialization & Auth State -->
     <script>
         // Gunakan Firebase Config yang disediakan oleh runtime atau konfigurasi default untuk pencegahan error offline
-        let firebaseConfig = {
-            apiKey: "AIzaSyDummyKeyForVercelIntegrationNoKeyNeeded",
-            authDomain: "affiliate-ai-pi.firebaseapp.com",
-            projectId: "affiliate-ai-pi",
-            storageBucket: "affiliate-ai-pi.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:abcdef"
-        };
+        let firebaseConfig ={
+  apiKey: "AIzaSyDpodP6VGepN9hjHHKIl33hCFZPRH0lZfQ",
+  authDomain: "affiliate-ai-pi.firebaseapp.com",
+  projectId: "affiliate-ai-pi",
+  storageBucket: "affiliate-ai-pi.firebasestorage.app",
+  messagingSenderId: "422301008490",
+  appId: "1:422301008490:web:6fa05edfcfc3425b0cc013",
+  measurementId: "G-MZQ2EN6PVR"
+};
+  
 
         // Jika terdapat konfigurasi global dari Vercel/Platform, timpa konfigurasi default
         if (typeof __firebase_config !== 'undefined') {
